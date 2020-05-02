@@ -1,0 +1,15 @@
+.DS_Store
+data.zip
+data/
+preprocess/
+.idea/
+need/
+__MACOSX
+__pycache__
+.ipynb_checkpoints
+dete_best_model.pt
+entity_best_model.pt
+pred_best_model.pt
+input_file.txt
+mid2name.txt
+tuple_topic.txt
