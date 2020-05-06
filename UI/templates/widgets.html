@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <!-- <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		
+		
+		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+	
+		<meta name="description" content="Example of using GIF files to bring text to speech voices to life in your browser."> -->
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>AdminLTE 3 | Widgets</title>
+  <!-- Tell the browser to be responsive to screen width -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="../static/fontawesome-free/css/all.min.css">
+  <!-- Ionicons -->
+  <link rel="stylesheet" href="https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css">
+  <!-- Theme style -->
+  <link rel="stylesheet" href="../static/dist/css/adminlte.min.css">
+  <!-- Google Font: Source Sans Pro -->
+  <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700" rel="stylesheet">
+  <script src="https://code.jquery.com/jquery-3.4.1.min.js"
+    integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+  <script type="text/javascript" src="../static/libgif.js"></script>
+
+  <script>
+
+    function send_message() {
+      inp = document.getElementById('inp');
+      text = inp.value;
+      inp.value = "";
+
+      var innerdiv = document.createElement('div');
+      innerdiv.className = 'direct-chat-text';
+      innerdiv.innerHTML = text
+
+      var div = document.createElement('div');
+      div.className = 'direct-chat-msg';
+      div.appendChild(innerdiv)
+
+      document.getElementById("chatbox").appendChild(div)
+
+      $.get("/new_message", { input_dialogue: text }, function (data) {
+        // alert(data);
+
+        var innerdiv = document.createElement('div');
+
+        innerdiv.className = 'direct-chat-text';
+        innerdiv.innerHTML = data
+
+        var div = document.createElement('div');
+        div.className = 'direct-chat-msg right';
+        div.appendChild(innerdiv)
+        document.getElementById("chatbox").appendChild(div);
+
+
+        if (!'speechSynthesis' in window) {
+          instructions.innerHTML = "Speech synthesis is not supported in this browser.  Sorry.";
+          document.getElementById('ttsoptions').style.visibility = "hidden";
+        }
+        else {
+          document.getElementById('ttsoptions').style.visibility = "visible";
+          if (speechSynthesis.speaking) {
+            return;
+          }
+          var textData = data;
+          // get the selected voice
+          var voice = speechSynthesis.getVoices().filter(function (voice) {
+            return voice.name == voiceSelecter.value;
+          })[0];
+
+          // Splitting each utterance up using punctuation is important.  Intra-utterance
+          // punctuation will add silence to the tts which looks bad unless the mouth stops moving
+          // correctly. Better to split it into separate utterances so play_for_duration will move when
+          // talking, and be on frame 0 when not. 
+
+          // split everything betwen deliminators [.?,!], but include the deliminator.
+          var substrings = textData.match(/[^.?,!]+[.?,!]?/g);
+          for (var i = 0, l = substrings.length; i < l; ++i) {
+            var str = substrings[i].trim();
+
+            // Make sure there is something to say other than the deliminator
+            var numpunc = (str.match(/[.?,!]/g) || []).length;
+            if (str.length - numpunc > 0) {
+
+              // suprisingly decent approximation for multiple languages.
+
+              // if you change the rate, you would have to adjust
+              var speakingDurationEstimate = str.length * 50;
+              // Chinese needs a different calculation.  Haven't tried other Asian languages.
+              if (str.match(/[\u3400-\u9FBF]/)) {
+                speakingDurationEstimate = str.length * 200;
+              }
+
+              var msg = new SpeechSynthesisUtterance();
+
+              (function (dur) {
+                msg.addEventListener('start', function () {
+                  sup1.play_for_duration(dur);
+                })
+              })(speakingDurationEstimate);
+
+              // The end event is too inacurate to use for animation,
+              // but perhaps it could be used elsewhere.  You might need to push 
+              // the msg to an array or aggressive garbage collection fill prevent the callback
+              // from firing.
+              //msg.addEventListener('end', function (){console.log("too late")}			                
+
+              msg.text = str;
+              //change voice here
+              msg.voice = voice;
+
+              window.speechSynthesis.speak(msg);
+            }
+          }
+        }
+
+        // var msg = new SpeechSynthesisUtterance();
+        // var voices = window.speechSynthesis.getVoices();
+        // //msg.voice = voices[$('#voices').val()];
+        // //msg.rate = $('#rate').val() / 10;
+        // //msg.pitch = $('#pitch').val();
+        // msg.text = data;
+
+        // msg.onend = function (e) {
+        //   console.log('Finished in ' + event.elapsedTime + ' seconds.');
+        // };
+
+        // speechSynthesis.speak(msg);
+
+      });
+
+
+    }
+
+    var speechRecognizer = new webkitSpeechRecognition();// a new speech recognition object
+    var finalTranscripts = ''
+    //function to start listening to voice and then convert it to text
+
+    function startConverting() {
+
+      if ('webkitSpeechRecognition' in window) {
+
+        speechRecognizer.continuous = true;
+        speechRecognizer.interimResults = true;
+        speechRecognizer.lang = 'en-IN';
+        speechRecognizer.start();
+
+
+        speechRecognizer.onresult = function (event) {
+          var interimTranscripts = '';
+          for (var i = event.resultIndex; i < event.results.length; i++) {
+            var transcript = event.results[i][0].transcript;
+            transcript.replace("\n", "<br>");
+            if (event.results[i].isFinal) {
+              finalTranscripts += transcript;
+              console.log(finalTranscripts);
+
+            } else {
+              interimTranscripts += transcript;
+            }
+          }
+
+          document.getElementById('typebox').innerHTML = finalTranscripts + interimTranscripts;
+          // document.querySelector('body').innerHTML = finalTranscripts + '<i style="color:#ddd;">' + interimTranscripts + '</>';
+
+        };
+        speechRecognizer.onerror = function (event) {
+        };
+
+      } else {
+        r.innerHTML = 'No browser support. Please upgrade your browser';
+      }
+
+    }
+    function Clear() {
+
+      // console.log("clear");
+      r = document.getElementById('typebox');
+      text = r.value
+      r.value = "";
+      finalTranscripts = '';
+
+
+
+      var innerdiv = document.createElement('div');
+      innerdiv.className = 'direct-chat-text';
+      innerdiv.innerHTML = text
+
+      var div = document.createElement('div');
+      div.className = 'direct-chat-msg';
+      div.appendChild(innerdiv)
+
+      document.getElementById("chatbox").appendChild(div)
+
+      $.get("/new_message", { input_dialogue: text }, function (data) {
+        // alert(data);
+
+        var innerdiv = document.createElement('div');
+
+        innerdiv.className = 'direct-chat-text';
+        innerdiv.innerHTML = data
+
+        var div = document.createElement('div');
+        div.className = 'direct-chat-msg right';
+        div.appendChild(innerdiv)
+        document.getElementById("chatbox").appendChild(div)
+
+        var msg = new SpeechSynthesisUtterance();
+        var voices = window.speechSynthesis.getVoices();
+        //msg.voice = voices[$('#voices').val()];
+        //msg.rate = $('#rate').val() / 10;
+        //msg.pitch = $('#pitch').val();
+        msg.text = data;
+
+        msg.onend = function (e) {
+          console.log('Finished in ' + event.elapsedTime + ' seconds.');
+        };
+
+        speechSynthesis.speak(msg);
+
+      });
+
+
+
+
+
+
+
+
+
+    }
+    function stopConverting() {
+
+      speechRecognizer.stop();
+      Clear();
+
+    }
+
+
+
+  </script>
+</head>
+
+<body class="hold-transition sidebar-mini">
+  <div class="wrapper">
+
+
+    <!-- Main Sidebar Container -->
+
+
+    <!-- Content Wrapper. Contains page content -->
+    <div class="content-wrapper">
+      <!-- Content Header (Page header) -->
+
+      <!-- Main content -->
+      <section class="content">
+        <div class="container-fluid">
+
+
+
+
+
+          <div class="row">
+
+            <div class="col-md-6">
+              <!-- DIRECT CHAT SUCCESS -->
+              <div class="card card-sucress cardutline direct-chat direct-chat-success">
+                <div class="card-header">
+                  <h3 class="card-title">Direct Chat</h3>
+
+                  <div class="card-tools">
+                    <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-minus"></i>
+                    </button>
+                    <button type="button" class="btn btn-tool" data-card-widget="remove"><i class="fas fa-times"></i>
+                    </button>
+                  </div>
+                </div>
+                <!-- /.card-header -->
+                <div class="card-body">
+                  <!-- Conversations are loaded here -->
+                  <div class="direct-chat-messages" id="chatbox">
+                    <!-- Message. Default to the left -->
+
+                    <!-- /.direct-chat-msg -->
+                  </div>
+                  <!--/.direct-chat-messages-->
+
+
+                </div>
+                <!-- /.card-body -->
+                <div class="card-footer">
+                  <div class="input-group">
+                    <input type="text" name="message" placeholder="Type Message ..." class="form-control" id="inp">
+                    <span class="input-group-append">
+                      <button class="btn btn-success" onclick="send_message()">Send</button>
+                    </span>
+
+                  </div>
+                  <div class="input-group">
+                    <textarea placeholder="Type Message ..." class="form-control" id="typebox">
+                    </textarea>
+
+                    <!-- button for mic -->
+                    <span class="input-group-append">
+                      <button class="btn btn-success" onclick="startConverting();" id="speak">Speak</button>
+                    </span>
+
+                    <!-- button for stop -->
+                    <span class="input-group-append">
+                      <button class="btn btn-success" onclick="stopConverting();" id="stop">Stop</button>
+                    </span>
+                    <span class="input-group-append">
+                      <button class="btn btn-success" id="speaksys">tts</button>
+                    </span>
+
+
+                  </div>
+                </div>
+                <!-- /.card-footer-->
+              </div>
+              <!--/.direct-chat -->
+            </div>
+            <!-- /.col -->
+            <div class="col-md-6">
+              <center>
+
+                <div id="ttsoptions">
+                  <div>
+                    <label>Voice:</label>
+                    <select id="voiceSelecter" class="guioption"></select>
+                  </div>
+                  <div>
+          
+                    <!-- <input type="text" id="texttospeakinput" value="Pretty cool. I didn't know gifs could talk." class="guioption"
+                      onClick="this.setSelectionRange(0, this.value.length)"> -->
+                    <!-- <div id="texterrormessage" class="guierrormessage"></div> -->
+                  </div>
+                  <!-- <div>
+                    <button id="newgifbutton">GIF</button>
+                    <input type="text" id="gifurlinput" value="https://i.imgur.com/ork8hoP.gif" class="guioption"
+                      onClick="this.setSelectionRange(0, this.value.length)">
+                    <div id="giferrormessage" class="guierrormessage"></div>
+                  </div> -->
+                </div>
+                <div id="instructions">Click on the image below to hear the message.</div>
+                <script type="text/javascript">
+                </script>
+                <div>
+                  <!-- <a href="javascript:playsyncronized()"> -->
+                  <div id="imagecontainer">
+                    <img id="exampleimg" src="../static/model.gif" rel:animated_src="../static/model.gif" rel:auto_play="0" />
+                  </div>
+                  <!-- </a>  -->
+                </div>
+                <br>
+          
+                <div id="footer">
+                  <!-- <h3>More Information</h3>
+                <div><a href="https://github.com/talkr-app/gif-talkr">Github Project</a></div>
+                <div><a href="https://imgur.com/a/NRZVQ">Sample GIFs</a></div>
+                <div><a href="https://talkrapp.com">Talkr</a></div> -->
+                </div>
+              </center>
+            </div>
+          </div>
+          <!-- /.row -->
+
+        </div><!-- /.container-fluid -->
+      </section>
+      <!-- /.content -->
+
+
+    </div>
+    <!-- ./wrapper -->
+
+    <style>
+      /* the superGifCanvas elements can be styled if you need to*/
+      /*
+      .superGifCanvas {
+        width:100%;
+      }
+      */
+      * {
+        -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+      }
+
+      .guierrormessage {
+        color: #FF0000;
+      }
+
+      .guioption {
+        width: 280px;
+        padding: 0.2em;
+        font-size: 1em;
+        display: inline-block;
+        box-shadow: 0 2px 3px rgba(0, 0, 0, 0.1) inset;
+      }
+
+      #giferrormessage {
+        display: inline-block;
+      }
+
+      #newgifbutton {
+        font-size: 1.0rem;
+        padding: 0.5rem 0.6em;
+        background: #69c773;
+        border-bottom: 1px solid #498b50;
+        color: white;
+        -webkit-font-smoothing: antialiased;
+        font-weight: bold;
+        margin: 0;
+        height: 35px;
+        text-align: center;
+      }
+
+      #texttospeakinput {
+        width: 50%;
+      }
+
+      .superGifCanvas {
+        max-width: 100%;
+      }
+    </style>
+    
+  </div>
+
+  <script type="text/javascript" src="../static/example.js"></script>
+
+  <!-- jQuery -->
+  <script src="../static/jquery/jquery.min.js"></script>
+  <!-- Bootstrap 4 -->
+  <script src="../static/bootstrap/js/bootstrap.bundle.min.js"></script>
+  <!-- AdminLTE App -->
+  <script src="../static/dist/js/adminlte.min.js"></script>
+  <!-- AdminLTE for demo purposes -->
+  <script src="../static/dist/js/demo.js"></script>
+</body>
+
+</html>
