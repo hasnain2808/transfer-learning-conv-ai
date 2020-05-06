@@ -17,3 +17,6 @@ The installation of the project should be done as follows<br>
 Clone the repository<br>
 Install and run each of the submodule as per the instructions in the readme in their folders<br>
 Run the chat.py file in the root<br>
+
+
+Or run the docker file it will do everything for you
