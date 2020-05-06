@@ -20,3 +20,5 @@ Run the chat.py file in the root<br>
 
 
 Or run the docker file it will do everything for you
+
+and then go to the [your ip]:5001 to see the gui chatbot
