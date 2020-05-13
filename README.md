@@ -22,3 +22,47 @@ Run the chat.py file in the root<br>
 Or run the docker file it will do everything for you
 
 and then go to the [your ip]:5001 to see the gui chatbot
+
+Example conversation
+
+USER: hi
+
+BOT: hello how are you doing?
+
+USER: I am great how are you
+
+BOT: I’m doing well. I’m listening to music.
+
+USER: which music do you like
+
+BOT: I love all music. I love all music.
+
+USER: I like countryside
+
+BOT: I am in the united states
+
+USER: in Texas?
+
+BOT: I’m in Texas
+
+USER: that's great
+
+BOT: I’m also in Canada
+
+USER: how can you be in two places?
+
+BOT: I’m in Canada, how about you?
+
+USER: I am in japan
+
+BOT: that is awesome! my parents are from japan
+
+USER: ohh where in japan?
+
+BOT: I’m from the united states.
+
+USER: your parents?
+
+BOT: my mom and dad are from japan
+
+
